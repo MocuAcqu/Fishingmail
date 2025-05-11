@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>釣魚郵件偵測器</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div>
+        <img src="icons/Ftitle.png" width="350px">
+    </div>
+    <div class="container">
+
+        <div class="card">
+            <label for="modeSelector">🔍 選擇功能模式</label>
+            <select id="modeSelector">
+                <option value="batch">📂 批次掃描多封信</option>
+                <option value="single">📬 單封信分析</option>
+            </select>
+              
+        </div>
+
+        <div class="card" id="batchOptions">
+            <label for="pagesToScan">🗂️ 掃描頁數</label>
+            <input type="number" id="pagesToScan" value="2" min="1" placeholder="最多 X 頁" />
+        </div>
+
+        <button id="scanEmails">🚀 開始分析</button>
+
+        <div class="card" id="resultSection">
+            <h2>📑 掃描結果</h2>
+            <p>偵測到 <span id="count">*未知*</span> 封可疑郵件</p>
+            <ul id="emailList"></ul>
+            <div class="section fade-in" id="singleResult"></div>
+        </div>
+        
+
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

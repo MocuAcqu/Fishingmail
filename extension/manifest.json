@@ -1,0 +1,38 @@
+{
+    "manifest_version": 3,
+    "name": "釣魚郵件偵測器4.0",
+    "version": "1.0",
+    "icons": {
+        "16": "icons/128fish.png",
+        "128": "icons/128fish.png"
+    },
+    "description": "偵測電子郵件標題是否為釣魚郵件",
+    "permissions": ["storage", "activeTab", "scripting", "tabs"],
+    "host_permissions": ["https://mail.google.com/*","http://localhost:5000/*","http://127.0.0.1:5000/phishing-urls","http://localhost:5000/predict-text"],
+    "action": {
+      "default_popup": "popup.html",
+      "default_icon": {
+        "16": "icons/128fish.png",
+        "48": "icons/128fish.png",
+        "128": "icons/128fish.png"
+      }
+    },
+    "background": {
+      "service_worker": "background.js"
+    },
+    "content_scripts": [
+      {
+        "matches": ["https://mail.google.com/*"],
+        "js": ["content.js"],
+        "run_at": "document_idle"
+      }
+    ],
+    "web_accessible_resources": [
+      {
+          "resources": ["assets/phishing_urls.csv"],
+          "matches": ["<all_urls>"]
+      }
+    ]
+
+  }
+  
