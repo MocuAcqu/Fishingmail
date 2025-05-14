@@ -1,9 +1,9 @@
 body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter','Noto Sans TC', sans-serif;
     background-color: #3e3e3e;
     margin: 0;
     padding: 0;
-    width: 350px;
+    width: 360px;
     color: #333;
 }
 
@@ -11,15 +11,9 @@ body {
     padding: 20px;
 }
 
-h1 {
-    text-align: center;
-    font-size: 20px;
-    color: #c0392b;
-    margin-bottom: 15px;
-}
-
 h2 {
     font-size: 16px;
+    margin-top: 0;
     margin-bottom: 10px;
     color: #2c3e50;
     text-align: left;
@@ -38,6 +32,7 @@ label {
     display: block;
     font-weight: 600;
     margin-bottom: 5px;
+    color: #333;
 }
 
 select, input[type="number"] {
@@ -48,12 +43,10 @@ select, input[type="number"] {
     font-size: 14px;
     background-color: #fdfdfd;
     box-sizing: border-box;
+    margin-bottom: 10px;
 }
 
-
-
-
-button {
+button#scanEmails {
     width: 100%;
     background-color: #e74c3c;
     color: white;
@@ -67,29 +60,213 @@ button {
     margin-bottom: 20px;
 }
 
-button:hover {
+button#scanEmails:hover {
     background-color: #c0392b;
 }
 
 
-ul {
+ul#emailList {
     list-style-type: none;
     padding-left: 0;
     font-size: 14px;
     margin-top: 10px;
+    max-height: 300px; /* 限制最大高度並允許滾動 */
+    overflow-y: auto;
 }
 
-li {
-    background: #ffe5e5;
-    border-left: 4px solid #e74c3c;
+/* 原先的 li 樣式，現在用於批次掃描中的可疑郵件項 */
+ul#emailList > li.suspicious-email-item {
+    background: #fff0f0; /* 淡紅色背景，比 #ffe5e5 更柔和一點 */
+    border: 1px solid #ffcccc; /* 添加細邊框 */
+    border-left: 4px solid #e74c3c; /* 保持你的左邊框顏色 */
+    margin: 8px 0; /* 調整間距 */
+    padding: 12px; /* 調整內邊距 */
+    border-radius: 6px; /* 保持你的圓角 */
+}
+
+/* 用於批次掃描中，"無可疑郵件" 的提示 */
+ul#emailList > li.safe {
+    background: #e6ffe6; /* 淡綠色背景 */
+    border-left: 4px solid #28a745; /* 綠色左邊框 */
+    color: #155724; /* 深綠色文字 */
     margin: 5px 0;
-    padding: 8px 10px;
+    padding: 10px;
     border-radius: 6px;
+}
+
+/* 批次掃描 - 郵件標題和寄件人 */
+.email-header {
+    margin-bottom: 8px;
+    font-size: 0.9em;
+    color: #555; /* 標題和寄件人文字顏色 */
+}
+.email-header strong {
+    color: #333; /* "標題:", "寄件人:" 字樣加粗 */
+}
+
+/* 批次掃描 - 偵測到的原因列表 */
+.reasons-list h4 {
+    margin-top: 10px;
+    margin-bottom: 5px;
+    color: #c0392b; /* 使用你的主紅色調 */
+    font-size: 0.95em;
+}
+.reasons-list ul { /* 內部原因列表 */
+    list-style-type: none;
+    padding-left: 0;
+    margin-top: 5px;
+}
+.reason-item {
+    font-size: 0.9em;
+    padding: 8px;
+    margin-bottom: 6px;
+    background-color: #ffeae5; /* 更淡的紅色背景 */
+    border-radius: 4px;
+    border: 1px solid #ffdad3;
+}
+.reason-item .reason-title strong {
+    color: #a73122; /* 原因標題的顏色 */
+}
+.reason-item .reason-explanation {
+    color: #333;
+    margin: 4px 0;
+}
+.reason-item .reason-detail {
+    color: #555;
+    font-size: 0.9em;
+    word-break: break-all;
+    margin-top: 3px;
+}
+.reason-item .reason-tip {
+    color: #0066cc; /* 藍色提示 */
+    font-weight: bold;
+    margin-top: 6px;
+    background-color: #e0f0ff;
+    padding: 6px;
+    border-radius: 3px;
+    font-size: 0.95em;
 }
 
 #count {
     font-weight: bold;
     color: #e67e22;
+}
+
+/* === 單封信分析結果樣式 === */
+#singleResult {
+    margin-top: 15px; /* 與其他 card 分隔 */
+}
+
+#singleResult .email-details {
+    background-color: #f8f9fa; /* 淡灰色背景 */
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border: 1px solid #e9ecef;
+    font-size: 0.95em;
+}
+#singleResult .email-details p {
+    margin: 5px 0;
+}
+#singleResult .preview-text {
+    display: block;
+    max-height: 100px;
+    overflow-y: auto;
+    background-color: #fff;
+    padding: 8px;
+    border: 1px solid #eee;
+    font-size: 0.9em;
+    white-space: pre-wrap;
+    margin-top: 5px;
+    border-radius: 4px;
+}
+
+#singleResult h3 { /* "偵測結果分析" 標題 */
+    font-size: 1.1em; /* 略大於 h2 */
+    color: #e74c3c; /* 使用你的主紅色調 */
+    border-bottom: 2px solid #f0a098; /* 淡紅色底線 */
+    padding-bottom: 6px;
+    margin-top: 20px;
+    margin-bottom: 15px;
+}
+
+/* 通用知識卡樣式 */
+.knowledge-card {
+    padding: 12px 15px;
+    margin-top: 10px;
+    border-radius: 8px; /* 匹配你的 card 圓角 */
+    border-left-width: 5px;
+    border-left-style: solid;
+    font-size: 0.9em;
+    line-height: 1.5;
+}
+.knowledge-card h4 { /* 卡片內的標題 */
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-size: 1.05em; /* 比卡片文字稍大 */
+}
+.knowledge-card p {
+    margin-bottom: 5px;
+}
+.knowledge-card p:last-child {
+    margin-bottom: 0;
+}
+.knowledge-card .tip {
+    font-weight: bold;
+    padding: 8px;
+    border-radius: 4px;
+    margin-top: 10px;
+    display: block; /* 讓背景色填滿 */
+}
+
+/* 不同類型的知識卡 */
+.problem-card { /* 紅色系警告 */
+    background-color: #fbeeed; /* 淡紅色背景 */
+    border-color: #e74c3c; /* 左邊框使用你的主紅色 */
+    color: #721c24; /* 深紅色文字 */
+}
+.problem-card h4 {
+    color: #c0392b; /* 標題用你的主紅色 */
+}
+.problem-card .tip {
+    color: #721c24;
+    background-color: #f5c6cb; /* 提示背景色 */
+}
+
+.safe-card { /* 綠色系安全提示 */
+    background-color: #e6ffe6;
+    border-color: #28a745; /* 綠色 */
+    color: #155724;
+}
+.safe-card h4 {
+    color: #1e7e34;
+}
+.safe-card .tip {
+    color: #155724;
+    background-color: #c3e6cb;
+}
+
+.neutral-card { /* 中性提示，如 "無法取得資訊" */
+    background-color: #e9ecef; /* 淡灰色 */
+    border-color: #adb5bd; /* 灰色 */
+    color: #383d41;
+}
+.neutral-card h4 {
+    color: #495057;
+}
+.neutral-card .tip {
+    color: #004085;
+    background-color: #cce5ff;
+}
+
+.error { /* 通用錯誤訊息 */
+    color: #e74c3c; /* 使用你的主紅色 */
+    font-weight: bold;
+    padding: 10px;
+    background-color: #ffe5e5;
+    border: 1px solid #e74c3c;
+    border-radius: 6px;
+    text-align: center;
 }
 
 /* 結果區漸入效果 */

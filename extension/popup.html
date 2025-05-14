@@ -29,12 +29,15 @@
 
         <button id="scanEmails">🚀 開始分析</button>
 
-        <div class="card" id="resultSection">
-            <h2>📑 掃描結果</h2>
+                <!-- 批次掃描結果區 -->
+        <div class="card result-section" id="batchResultSection" style="display: none;">
+            <h2>📑 批次掃描結果</h2>
             <p>偵測到 <span id="count">*未知*</span> 封可疑郵件</p>
             <ul id="emailList"></ul>
-            <div class="section fade-in" id="singleResult"></div>
         </div>
+
+        <!-- 單封信分析結果區 -->
+        <div class="card result-section" id="singleResultSection" style="display: none;">
         
 
     </div>

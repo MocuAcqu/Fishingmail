@@ -6,9 +6,61 @@ let phishingKeywords = [
 
 // 可疑寄件人清單（比對寄件人 email）
 let phishingSenders = [
-    "jobbank@104.com.tw",
-    "suspicious@example.com"
+    "suspicious@example.com",
+    "no-reply@google.com"
 ];
+
+const ANOMALY_TYPES = {
+    KEYWORD_SUBJECT: {
+        code: "KEYWORD_SUBJECT",
+        title: "主旨包含可疑關鍵字",
+        explanation: "郵件主旨中出現了常見的釣魚或詐騙用語，例如「緊急通知」、「帳戶已鎖定」、「立即驗證」等。",
+        tip: "💡 提高警覺！詐騙者常用聳動的標題誘使您立即行動。請先冷靜查證郵件來源及內容真實性。"
+    },
+    SUSPICIOUS_SENDER: {
+        code: "SUSPICIOUS_SENDER",
+        title: "寄件人為已知可疑來源",
+        explanation: "此寄件人的郵件地址已被標記為潛在的釣魚郵件發送者。",
+        tip: "💡 小心！即使寄件人名稱看起來熟悉，也要仔細檢查其完整的郵件地址。詐騙者常模仿合法機構的郵件地址。"
+    },
+    URL_IN_SUBJECT: {
+        code: "URL_IN_SUBJECT",
+        title: "主旨包含可疑網址",
+        explanation: "郵件主旨中直接包含了一個網址，這可能是誘騙您點擊的釣魚連結。",
+        tip: "💡 警惕！正常郵件很少在主旨中直接放入重要連結。在點擊前，請確認網址的真實性。"
+    },
+    KEYWORD_CONTENT: {
+        code: "KEYWORD_CONTENT",
+        title: "內容包含可疑關鍵字",
+        explanation: "郵件內容中偵測到與釣魚或詐騙相關的詞彙。",
+        tip: "💡 仔細閱讀！檢查郵件內文是否有語法錯誤、不合邏輯的要求或過於誘人的獎勵。"
+    },
+    URL_IN_CONTENT: {
+        code: "URL_IN_CONTENT",
+        title: "內容包含可疑網址",
+        explanation: "郵件內文中發現了已知的釣魚網址或指向可疑網站的連結。",
+        tip: "💡 不要輕易點擊！將滑鼠懸停在連結上（不要點擊）以預覽實際網址。如果看起來可疑，絕對不要點擊。"
+    },
+    SUSPICIOUS_LINK_CONTENT: {
+        code: "SUSPICIOUS_LINK_CONTENT",
+        title: "內容連結指向可疑網域",
+        explanation: "郵件內文中的超連結實際指向的網域與已知的釣魚網域相似或被列為可疑。",
+        tip: "💡 檢查連結！確認連結文字與實際指向的網址是否相符。詐騙者常使用看似正常的文字隱藏惡意連結。"
+    },
+    HAS_ATTACHMENT: {
+        code: "HAS_ATTACHMENT",
+        title: "郵件包含附件",
+        explanation: "郵件中帶有附件。惡意附件是散播病毒或勒索軟體的常見途徑。",
+        tip: "💡 謹慎開啟附件！除非您完全信任寄件人且預期會收到此附件，否則請勿開啟。特別是 .exe, .zip, .scr, .js 等類型的檔案。"
+    },
+    MODEL_DETECTED_URL: {
+        code: "MODEL_DETECTED_URL",
+        title: "AI模型偵測到可疑URL",
+        explanation: "我們的 AI 模型分析認為郵件中的某些 URL 具有釣魚網站的特徵。",
+        tip: "💡 AI輔助判斷！雖然AI模型能提供警示，但最終判斷仍需您結合其他資訊。若有疑慮，請勿點擊。"
+    },
+    // 你可以繼續添加更多異常類型
+};
 
 let phishingUrls = [];
 let urlsLoaded = false;
@@ -99,7 +151,7 @@ let checkedEmails = 0; // 已檢查信件數
 async function detectPhishingEmails() {
     console.log("⚙️ 偵測啟動，將偵測最多", maxPagesToCheck, "頁");
 
-    let suspiciousEmails = [];
+    let suspiciousEmailsData = []; // <--- 改名並改變結構
 
     // 📌 檢查信件總數
     let amountElements = document.querySelectorAll("span.Dj span.ts");
@@ -118,46 +170,57 @@ async function detectPhishingEmails() {
 
     // 針對當前頁面，檢查所有郵件（包含主旨與寄件人）
     async function checkEmailsOnPage() {
-
         const emailRows = document.querySelectorAll("tr.zA");
-        //console.log(`🔍 當前頁面找到 ${emailRows.length} 封郵件，開始檢查...`);
         console.log(`🔍 第 ${currentPage} 頁找到 ${emailRows.length} 封郵件，開始檢查...`);
         emailsOnCurrentPage = emailRows.length;
+
         emailRows.forEach(row => {
             const titleSpan = row.querySelector("span.bog");
             const senderSpan = row.querySelector("span.zF") || row.querySelector("span.yP");
-    
+
             if (!titleSpan || !senderSpan) return;
-    
+
             let title = titleSpan.textContent.trim();
             let senderEmail = senderSpan.getAttribute("email") || "未知寄件人";
-    
-            console.log("📩 信件標題:", title, "| 寄件人:", senderEmail);
-            // 假設 response 是你從 API 拿到的 phishing URL CSV 陣列（已經轉為陣列）
-            
+            let detectedAnomalies = []; // <--- 儲存這封郵件偵測到的異常
 
             // 判斷是否可疑
-            let subjectSuspicious = phishingKeywords.some(keyword => title.includes(keyword));
-            let senderSuspicious = phishingSenders.some(suspicious => senderEmail.toLowerCase().includes(suspicious.toLowerCase()));
-            let urlSuspicious = phishingUrls.some(url => title.includes(url));
-            //phishingDomains = phishingDomains.map(url => url.replace(/^https?:\/\//, ""));
-            console.log("🔎 ", phishingUrls);
-            console.log("🔎 是否有釣魚網址？", urlSuspicious);
-            
-
-            if (subjectSuspicious || senderSuspicious || urlSuspicious) {
-                // 註記整行信件樣式
-                row.style.color = "red";
-                row.style.fontWeight = "bold";
-                row.insertAdjacentHTML("beforeend", " ⚠️");
-    
-                // 儲存為物件（防止重複主旨漏記）
-                suspiciousEmails.push({
-                    title,
-                    sender: senderEmail
+            let subjectKeywordsFound = phishingKeywords.filter(keyword => title.includes(keyword));
+            if (subjectKeywordsFound.length > 0) {
+                detectedAnomalies.push({
+                    code: ANOMALY_TYPES.KEYWORD_SUBJECT.code,
+                    detail: `關鍵字: ${subjectKeywordsFound.join(', ')}`
                 });
             }
-            checkedEmails++; // 增加已檢查的信件數
+
+            let senderFound = phishingSenders.filter(suspicious => senderEmail.toLowerCase().includes(suspicious.toLowerCase()));
+            if (senderFound.length > 0) {
+                detectedAnomalies.push({
+                    code: ANOMALY_TYPES.SUSPICIOUS_SENDER.code,
+                    detail: `寄件人: ${senderFound.join(', ')}`
+                });
+            }
+
+            let urlsInSubjectFound = phishingUrls.filter(url => title.includes(url));
+            if (urlsInSubjectFound.length > 0) {
+                detectedAnomalies.push({
+                    code: ANOMALY_TYPES.URL_IN_SUBJECT.code,
+                    detail: `網址: ${urlsInSubjectFound.join(', ')}`
+                });
+            }
+
+            if (detectedAnomalies.length > 0) {
+                row.style.backgroundColor = "rgba(255, 0, 0, 0.1)"; // 淡紅色背景
+                row.style.borderLeft = "3px solid red";
+                row.insertAdjacentHTML("beforeend", `<td style="color:red; font-weight:bold; padding-left:5px;">⚠️</td>`);
+
+                suspiciousEmailsData.push({ // <--- 使用新的結構
+                    title,
+                    sender: senderEmail,
+                    anomalies: detectedAnomalies // 儲存異常列表
+                });
+            }
+            checkedEmails++;
         });
     }
 
@@ -171,7 +234,7 @@ async function detectPhishingEmails() {
     async function goToNextPage() {
         if (currentPage >= maxPagesToCheck) {
             console.log(`✅ 已達到 ${maxPagesToCheck} 頁上限，停止偵測`);
-            displaySuspiciousEmails(suspiciousEmails);
+            displaySuspiciousEmails(suspiciousEmailsData);
             moveAndClickNewest();
             return;
         }
@@ -190,13 +253,13 @@ async function detectPhishingEmails() {
                 if (hasNextPage() && currentPage < maxPagesToCheck) {
                     goToNextPage();
                 } else {
-                    displaySuspiciousEmails(suspiciousEmails);
+                    displaySuspiciousEmails(suspiciousEmailsData);
                     moveAndClickNewest();
                 }
             }, 1500);
         } else {
             console.log("✅ 沒有更多頁了");
-            displaySuspiciousEmails(suspiciousEmails);
+            displaySuspiciousEmails(suspiciousEmailsData);
             moveAndClickNewest();
         }
     }
@@ -206,9 +269,17 @@ async function detectPhishingEmails() {
     if (hasNextPage() && currentPage < maxPagesToCheck) {
         goToNextPage();
     } else {
-        displaySuspiciousEmails(suspiciousEmails);
+        displaySuspiciousEmails(suspiciousEmailsData);
         moveAndClickNewest();
     }
+}
+
+function displaySuspiciousEmails(detectedEmails) { // <--- 參數改名
+    console.log("🔍 偵測到可疑郵件資料：", detectedEmails);
+    // chrome.storage.local.set({ suspiciousEmails: detectedEmails }... // Key 名稱不變，方便 popup.js
+    chrome.storage.local.set({ suspiciousEmails: detectedEmails }, async () => {
+        console.log("✅ 已儲存 suspiciousEmails (包含異常詳情)");
+    });
 }
 
 function simulateMouseEvent(target, type) {
@@ -256,50 +327,14 @@ function displaySuspiciousEmails(suspiciousEmails) {
     }); 
 }
 
-/*async function scanEmailContent(row, title, senderEmail) {
-    row.click(); // 點進信件
-    console.log("📬 已點開信件:", title);
-
-    await new Promise(resolve => setTimeout(resolve, 1500)); // 等信件載入
-
-    let contentElement = document.querySelector("div.a3s"); // Gmail 內文容器
-    if (!contentElement) {
-        console.warn("❗ 無法找到內文");
-        return;
-    }
-
-    let contentText = contentElement.innerText || "";
-    let contentSuspicious = phishingKeywords.some(keyword => contentText.includes(keyword));
-
-    if (contentSuspicious) {
-        console.log("⚠️ 內文含釣魚字詞:", contentText.slice(0, 80));
-        suspiciousEmails.push({
-            title,
-            sender: senderEmail,
-            preview: contentText.slice(0, 100)
-        });
-    }
-
-     // 點返回箭頭
-    let backButton = document.querySelector("div[title='返回收件匣']");
-    if (backButton) {
-        backButton.dispatchEvent(new MouseEvent("mousedown"));
-        backButton.dispatchEvent(new MouseEvent("mouseup"));
-        backButton.click();
-        console.log("↩️ 返回信件列表");
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 1000)); // 等返回完成
-}*/
-
 async function scanCurrentEmail() {
-    let suspicious = {
+    let analysisResult = {
         title: "",
         sender: "",
         preview: "",
         urls: [],
         attachments: [],
-        problems: []
+        detectedProblems: []
     };
 
     const phishingDomains = phishingUrls.map(url => {
@@ -316,24 +351,40 @@ async function scanCurrentEmail() {
 
     if (!titleElement || !senderElement) {
         console.warn("❗ 無法取得標題或寄件人，請確認是否點入單封信建中");
-        chrome.storage.local.set({ singleEmailResult: { error: "無法取得信件資訊" } });
+        chrome.storage.local.set({ singleEmailResult: { error: "無法取得信件資訊" ,
+        // 可以額外加上一個通用錯誤的知識卡提示
+        knowledgeTip: "請先點開一封您想要分析的郵件，然後再點擊「單封信分析」按鈕。"} });
         return;
     }
 
-    suspicious.title = titleElement.textContent.trim();
-    suspicious.sender = senderElement.getAttribute("email") || "未知寄件人";
+    analysisResult.title = titleElement.textContent.trim();
+    analysisResult.sender = senderElement.getAttribute("email") || "未知寄件人";
 
-    // 檢查標題與寄件人、釣魚網址
-    if (phishingKeywords.some(k => suspicious.title.includes(k))) {
-        suspicious.problems.push("標題含可疑關鍵字");
-    }
-    if (phishingSenders.some(s => suspicious.sender.toLowerCase().includes(s.toLowerCase()))) {
-        suspicious.problems.push("寄件人為可疑來源");
+    // 檢查標題
+    const titleKeywordsFound = phishingKeywords.filter(k => analysisResult.title.includes(k));
+    if (titleKeywordsFound.length > 0) {
+        analysisResult.detectedProblems.push({
+            code: ANOMALY_TYPES.KEYWORD_SUBJECT.code,
+            detail: `關鍵字: ${titleKeywordsFound.join(', ')}`
+        });
     }
 
-    
-    if (phishingUrls.some(url => suspicious.title.includes(url))) {
-        suspicious.problems.push("標題含釣魚網址");
+    // 檢查寄件人
+    const suspiciousSendersFound = phishingSenders.filter(s => analysisResult.sender.toLowerCase().includes(s.toLowerCase()));
+    if (suspiciousSendersFound.length > 0) {
+        analysisResult.detectedProblems.push({
+            code: ANOMALY_TYPES.SUSPICIOUS_SENDER.code,
+            detail: `寄件人: ${suspiciousSendersFound.join(', ')}`
+        });
+    }
+
+    // 檢查標題中的釣魚網址
+    const urlsInTitleFound = phishingUrls.filter(url => analysisResult.title.includes(url));
+    if (urlsInTitleFound.length > 0) {
+        analysisResult.detectedProblems.push({
+            code: ANOMALY_TYPES.URL_IN_SUBJECT.code,
+            detail: `網址: ${urlsInTitleFound.join(', ')}`
+        });
     }
     
 
@@ -341,42 +392,48 @@ async function scanCurrentEmail() {
     const contentElement = document.querySelector("div.a3s");
 
     if (contentElement) {
-    suspicious.preview = contentElement.innerText.slice(0, 300);
+        analysisResult.preview = contentElement.innerText.slice(0, 300);
 
-        // 可疑關鍵字檢查
-        if (phishingKeywords.some(k => suspicious.preview.includes(k))) {
-            suspicious.problems.push("信件內容含可疑字詞");
+        const contentKeywordsFound = phishingKeywords.filter(k => analysisResult.preview.includes(k));
+        if (contentKeywordsFound.length > 0) {
+            analysisResult.detectedProblems.push({
+                code: ANOMALY_TYPES.KEYWORD_CONTENT.code,
+                detail: `內容關鍵字: ${contentKeywordsFound.join(', ')}`
+            });
         }
 
-        if (phishingUrls.some(url => suspicious.preview.includes(url))) {
-            suspicious.problems.push("信件內容含釣魚網址");
+        const urlsInContentFound = phishingUrls.filter(url => analysisResult.preview.includes(url));
+        if (urlsInContentFound.length > 0) {
+            analysisResult.detectedProblems.push({
+                code: ANOMALY_TYPES.URL_IN_CONTENT.code,
+                detail: `內容網址: ${urlsInContentFound.join(', ')}`
+            });
         }
 
-        // ✅ 這裡才可以使用 contentElement
         const linkElements = contentElement.querySelectorAll("a[href]");
+        let suspiciousLinksFound = [];
         for (let link of linkElements) {
             let href = link.getAttribute("href");
-        
+            // ... (處理 Gmail 包裝的網址) ...
             try {
-                // 處理 Gmail 包裝的網址（像是 https://www.google.com/url?q=https://phishy-site.com&...）
                 const url = new URL(href);
                 if (url.hostname === "www.google.com" && url.searchParams.has("q")) {
-                    href = url.searchParams.get("q"); // 抽出原始網址
+                    href = url.searchParams.get("q");
                 }
-            } catch (e) {
-                continue;
-            }
-        
+            } catch (e) { /* continue */ }
+
             try {
                 const domain = new URL(href).hostname;
                 if (phishingDomains.some(phishDomain => domain.includes(phishDomain))) {
-                    suspicious.problems.push("內文含連結：" + href);
-                    break;
+                    suspiciousLinksFound.push(href);
                 }
-            } catch (e) {
-                // 非法 URL 不處理
-                continue;
-            }
+            } catch (e) { /* continue */ }
+        }
+        if (suspiciousLinksFound.length > 0) {
+            analysisResult.detectedProblems.push({
+                code: ANOMALY_TYPES.SUSPICIOUS_LINK_CONTENT.code,
+                detail: `可疑連結: ${suspiciousLinksFound.join(', ')}`
+            });
         }
         
     }
@@ -385,33 +442,42 @@ async function scanCurrentEmail() {
     // 檢查附件
     const attachments = document.querySelectorAll("div.aQH span.aZo");
     if (attachments.length > 0) {
-        suspicious.attachments = Array.from(attachments).map(el => el.textContent);
-        suspicious.problems.push("信件含有附件，請小心檢查");
+        analysisResult.attachments = Array.from(attachments).map(el => el.textContent);
+        analysisResult.detectedProblems.push({
+            code: ANOMALY_TYPES.HAS_ATTACHMENT.code,
+            detail: `附件: ${analysisResult.attachments.join(", ")}`
+        });
     }
 
 
     //Autoencoder檢查
-    const urls = [
-        ...extractURLs(suspicious.title),
-        ...extractURLs(suspicious.preview)
-      ];
-      const modelResults = await checkURLsWithModel(urls);
-      
-      let abnormalUrls = [];
-      urls.forEach((url, idx) => {
-        if (modelResults[idx]) {
-          abnormalUrls.push(url);
-        }
-      });
-      
-      if (abnormalUrls.length > 0) {
-        abnormalUrls.forEach(url => {
-            suspicious.problems.push(`檢測到可疑 URL（來自模型預測）：${url}`);
+    const urlsForModel = [
+        ...extractURLs(analysisResult.title),
+        ...extractURLs(analysisResult.preview)
+    ];
+    if (urlsForModel.length > 0) { // 只有在提取到 URL 時才調用模型
+        const modelResults = await checkURLsWithModel(urlsForModel);
+        let abnormalUrlsFromModel = [];
+        urlsForModel.forEach((url, idx) => {
+            if (modelResults[idx]) { // modelResults[idx] is true if suspicious
+                abnormalUrlsFromModel.push(url);
+            }
         });
-        isPhishing = true;
-      }
-      
-    chrome.storage.local.set({ singleEmailResult: suspicious });
+
+        if (abnormalUrlsFromModel.length > 0) {
+            analysisResult.detectedProblems.push({
+                code: ANOMALY_TYPES.MODEL_DETECTED_URL.code,
+                detail: `模型偵測到的可疑URL: ${abnormalUrlsFromModel.join(', ')}`
+            });
+        }
+    }
+    
+    // 如果沒有偵測到任何問題，可以添加一個「無異常」的標記，或者讓 detectedProblems 為空
+    if (analysisResult.detectedProblems.length === 0) {
+         analysisResult.noAnomalies = true; // 加一個標記
+    }
+
+    chrome.storage.local.set({ singleEmailResult: analysisResult });
 }
 
 function extractURLs(text) {
